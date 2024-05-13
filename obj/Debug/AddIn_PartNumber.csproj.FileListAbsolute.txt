@@ -1,0 +1,9 @@
+E:\Visual Studio\AddIn_PartNumber\bin\Debug\AddIn_PartNumber.dll.config
+E:\Visual Studio\AddIn_PartNumber\bin\Debug\AddIn_PartNumber.dll
+E:\Visual Studio\AddIn_PartNumber\bin\Debug\AddIn_PartNumber.pdb
+E:\Visual Studio\AddIn_PartNumber\bin\Debug\EPDM.Interop.EPDMResultCode.dll
+E:\Visual Studio\AddIn_PartNumber\obj\Debug\AddIn_PartNumber.csproj.AssemblyReference.cache
+E:\Visual Studio\AddIn_PartNumber\obj\Debug\AddIn_PartNumber.csproj.CoreCompileInputs.cache
+E:\Visual Studio\AddIn_PartNumber\obj\Debug\AddIn_PartNumber.csproj.CopyComplete
+E:\Visual Studio\AddIn_PartNumber\obj\Debug\AddIn_PartNumber.dll
+E:\Visual Studio\AddIn_PartNumber\obj\Debug\AddIn_PartNumber.pdb
