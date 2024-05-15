@@ -13,7 +13,9 @@ namespace AddIn_PartNumber
 {
     public class PartNumber : IEdmAddIn5
     {
-        public string FileName = "C:\\Users\\Sushmita\\OneDrive - 3GLighting\\Desktop\\PartNos.xls"; //change this
+        public static string FileName = "C:\\Sandbox\\PartNos.xls"; //change this
+                                                             //public string FileName = "C:\\Users\\Sushmita\\OneDrive - 3GLighting\\Desktop\\PartNos.xls"; //change this
+        public static string sqlConnString = "Server=SV-SQL01\\DEV;Database=LUCEDEV;User Id=INTERACTIVE; Password=LUCE1234$;"; //change this
 
         void IEdmAddIn5.GetAddInInfo(ref EdmAddInInfo poInfo, IEdmVault5 poVault, IEdmCmdMgr5 poCmdMgr)
         {
@@ -80,8 +82,21 @@ namespace AddIn_PartNumber
 
                                 if (oProdType.ToString() == "Manufactured")
                                 {
-                                    int iPartNo = GetManufacturedPNo(FileName);
-                                    vars.SetVar("Number", Config, iPartNo.ToString(), true);
+                                    bool isLocked = openExcel(vault, poCmd.mlParentWnd, FileName);
+                                    if (isLocked)
+                                    {
+                                        int iPartNo = GetManufacturedPNo(FileName);
+                                        vars.SetVar("Number", Config, iPartNo.ToString(), true);
+
+                                        /* Paint Finish */
+                                        SetPaintFinish(Config, vars);
+                                        closeExcel(vault, poCmd.mlParentWnd, FileName, iPartNo);
+                                    }
+                                    else
+                                    {
+                                        MessageBox.Show("Another user is currently using the Part Number file. Please try later!");
+                                        break;
+                                    }
                                 }
                                 else if (oProdType.ToString() == "Purchased")
                                 {
@@ -101,20 +116,30 @@ namespace AddIn_PartNumber
                                 vars.GetVar("Part Stage", Config, out object oProdType);
                                 if (oProdType.ToString() == "Purchased")
                                 {
-                                    vars.GetVar("Category", Config, out object oCategory);
-                                    string strNewPartId = GetPurchasedPno(oCategory);
+                                    SetPurchasedPNo(Config, vars);
 
-                                    //Check if it was a 'Manufactured' part before
-                                    vars.GetVar("Number", Config, out object oPartNo);
-                                    vars.GetVar("Description", Config, out object oDesc);
+                                    //vars.GetVar("Category", Config, out object oCategory);
+                                    //string strNewPartId = GetPurchasedPno(oCategory);
 
-                                    string strDesc = GetDesc(oPartNo, oDesc);
-                                    if (strDesc != "")
-                                        vars.SetVar("Description", Config, strDesc, true);
-                                    //---//
+                                    ////Check if it was a 'Manufactured' part before
+                                    //vars.GetVar("Number", Config, out object oPartNo);
+                                    //vars.GetVar("Description", Config, out object oDesc);
 
-                                    vars.SetVar("Number", Config, strNewPartId, true);
+                                    //string strDesc = GetDesc(oPartNo, oDesc);
+                                    //if (strDesc != "")
+                                    //    vars.SetVar("Description", Config, strDesc, true);
+                                    ////---//
+
+                                    //vars.SetVar("Number", Config, strNewPartId, true);
                                 }
+                            }
+                            else
+                            if (poCmd.mbsComment == "Paint_Finish")
+                            {
+                                IEdmEnumeratorVariable5 vars = (IEdmEnumeratorVariable5)poCmd.mpoExtra;
+                                string Config = ((EdmCmdData)ppoData.GetValue(0)).mbsStrData1;
+                                /* Paint Finish */
+                                SetPaintFinish(Config, vars);
                             }
                         }
                         catch (System.Exception ex)
@@ -152,14 +177,26 @@ namespace AddIn_PartNumber
                                     MessageBox.Show("This Part Id already exists");
                                     if (oProdType.ToString() == "Manufactured")
                                     {
-                                        DelManufacturedPNo(FileName, oPartNo.ToString());
-                                        int iPartNo = GetManufacturedPNo(FileName);
-                                        vars.SetVar("Number", Config, iPartNo.ToString(), true);
-                                        DelManufacturedPNo(FileName, oPartNo.ToString());
+                                        bool isLocked = openExcel(vault, poCmd.mlParentWnd, FileName);
+                                        if (isLocked)
+                                        {
+                                            DelManufacturedPNo(FileName, oPartNo.ToString());
+                                            int iPartNo = GetManufacturedPNo(FileName);
+                                            vars.SetVar("Number", Config, iPartNo.ToString(), true);
+                                            DelManufacturedPNo(FileName, oPartNo.ToString());
+                                            closeExcel(vault, poCmd.mlParentWnd, FileName, iPartNo);
+                                        }
+                                        else
+                                        {
+                                            MessageBox.Show("Another user is currently using the Part Number file. Please try later!");
+                                            break;
+                                        }
                                     }
                                     else if (oProdType.ToString() == "Purchased")
                                     {
                                         SetPurchasedPNo(Config, vars);
+                                        /* Paint Finish */
+                                        SetPaintFinish(Config, vars);
                                     }
                                     vars.CloseFile(isValid);
                                     EdmCmdData cmdData = (EdmCmdData)ppoData.GetValue(0);
@@ -175,15 +212,25 @@ namespace AddIn_PartNumber
 
                                     if (isValid)
                                     {
-                                        //Delete from excel
-                                        DelManufacturedPNo(FileName, oPartNo.ToString());
-                                        vars.CloseFile(isValid);
-                                        if (isValid)
+                                        bool isLocked = openExcel(vault, poCmd.mlParentWnd, FileName);
+                                        if (isLocked)
                                         {
-                                            EdmCmdData cmdData = (EdmCmdData)ppoData.GetValue(0);
-                                            cmdData.mlLongData1 = (int)EdmCardFlag.EdmCF_CloseDlgOK;
-                                            ppoData.SetValue(cmdData, 0);
-                                            MessageBox.Show("The file has been saved");
+                                            //Delete from excel
+                                            DelManufacturedPNo(FileName, oPartNo.ToString());
+                                            vars.CloseFile(isValid);
+                                            if (isValid)
+                                            {
+                                                EdmCmdData cmdData = (EdmCmdData)ppoData.GetValue(0);
+                                                cmdData.mlLongData1 = (int)EdmCardFlag.EdmCF_CloseDlgOK;
+                                                ppoData.SetValue(cmdData, 0);
+                                                MessageBox.Show("The file has been saved");
+                                            }
+                                            closeExcel(vault, poCmd.mlParentWnd, FileName, 0);
+                                        }
+                                        else
+                                        {
+                                            MessageBox.Show("Another user is currently using the Part Number file. Please try later!");
+                                            break;
                                         }
                                     }
                                     else
@@ -277,6 +324,8 @@ namespace AddIn_PartNumber
                 //---//
 
                 vars.SetVar("Number", Config, strNewPartId, true);
+                /* Paint Finish */
+                SetPaintFinish(Config, vars);
             }
         }
 
@@ -288,13 +337,10 @@ namespace AddIn_PartNumber
             {
                 string connString = "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=\"" + fileName + "\";Extended Properties=\"Excel 12.0;IMEX=3;HDR=NO;TypeGuessRows=0;ImportMixedTypes=Text\"";
 
-                using (var conn = new OleDbConnection(connString))
-                {
-                    conn.Open();
-
-                    var sheets = conn.GetOleDbSchemaTable(System.Data.OleDb.OleDbSchemaGuid.Tables, new object[] { null, null, null, "TABLE" });
-                    if (sheets != null)
+                    using (var conn = new OleDbConnection(connString))
                     {
+                        conn.Open();
+
                         using (var cmd = conn.CreateCommand())
                         {
                             cmd.CommandText = "SELECT * FROM [Sheet1$]";
@@ -319,12 +365,17 @@ namespace AddIn_PartNumber
                                 }
                             }
                         }
+                        conn.Close();
+
+                        //    var sheets = conn.GetOleDbSchemaTable(System.Data.OleDb.OleDbSchemaGuid.Tables, new object[] { null, null, null, "TABLE" });
+                        //if (sheets != null)
+                        //{
+                        //}
                     }
-                }
             }
-            catch (System.Exception ex)
+            catch
             {
-                Console.WriteLine("Exception: " + ex.Message);
+
             }
 
         RET:
@@ -351,6 +402,9 @@ namespace AddIn_PartNumber
                         var sheets = conn.GetOleDbSchemaTable(System.Data.OleDb.OleDbSchemaGuid.Tables, new object[] { null, null, null, "TABLE" });
                         if (sheets != null)
                         {
+                            //string query = "UPDATE [Sheet1$] SET Column1 = REPLACE(Column1, '"+ iNo +"', 'newValue')";
+                            //OleDbCommand cmd = new OleDbCommand(query, conn);
+                            //cmd.ExecuteNonQuery();
                             using (var cmd = conn.CreateCommand())
                             {
                                 cmd.CommandText = "SELECT * FROM [Sheet1$]";
@@ -389,7 +443,6 @@ namespace AddIn_PartNumber
         {
             string strCategory = "", strPartId = "", strNewPartId = "";
             int iPartId = 0, iNewPartId = 0;
-            string sqlConnString = "Server=SV-SQL01\\DEV;Database=LUCEDEV;User Id=INTERACTIVE; Password=LUCE1234$;"; //change this
             SqlConnection conn = new SqlConnection(sqlConnString);
             conn.Open();
 
@@ -446,6 +499,72 @@ namespace AddIn_PartNumber
             }
 
             return strDesc;
+        }
+        public static void SetPaintFinish(string Config, IEdmEnumeratorVariable5 vars)
+        {
+            string sPartNo = "";
+            vars.GetVar("Number", Config, out object oPartNo);
+            vars.GetVar("Paint_Finish", Config, out object oPaint);
+
+            /* Remove paint value */
+            if (oPartNo != null)
+            {
+                sPartNo = oPartNo.ToString();
+                sPartNo = sPartNo.Replace("-WH", "");
+                sPartNo = sPartNo.Replace("-BK", "");
+                sPartNo = sPartNo.Replace("-SV", "");
+            }
+
+            string sPaintFin = "";
+            if (oPaint != null)
+            {
+                sPaintFin = oPaint.ToString();
+                if (sPaintFin == "WH" || sPaintFin == "BK" || sPaintFin == "SV")
+                    sPaintFin = "-" + sPaintFin;
+                else
+                    sPaintFin = "";
+            }
+
+            vars.SetVar("Number", Config, sPartNo + sPaintFin, true);
+        }
+        public static bool openExcel(IEdmVault5 vault, int mlParentWnd, string fileName)
+        {
+            IEdmVault11 vault11 = (IEdmVault11)vault;
+            bool isLocked = false;
+
+            try
+            {
+                IEdmFile6 file = (IEdmFile6)vault.GetFileFromPath(fileName, out IEdmFolder5 folder);
+
+                if (!file.IsLocked)
+                {
+                    file.LockFile(folder.ID, mlParentWnd, ((int)EdmLockFlag.EdmLock_Simple));
+                    isLocked = true;
+                }
+                else
+                {
+                    int fileLockId = file.LockedByUserID;
+                    int userId = vault11.GetLoggedInWindowsUserID(vault.Name);
+                    if (fileLockId == userId)
+                    {
+                        isLocked = true;
+                    }
+                }
+            }
+            catch
+            {
+
+            }
+            return isLocked;
+        }
+        public static void closeExcel(IEdmVault5 vault, int mlParentWnd, string fileName, int iPartNo)
+        {
+            IEdmFile6 file = (IEdmFile6)vault.GetFileFromPath(fileName, out IEdmFolder5 folder);
+
+            if (file.IsLocked)
+            {
+                file.UnlockFile(mlParentWnd, "Part Number used: " + iPartNo);
+            }
         }
 
         public static bool CheckFields(IEdmEnumeratorVariable5 vars, string Config, string[] fields)
